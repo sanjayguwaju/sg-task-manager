@@ -1,7 +1,7 @@
-const mongoose = require('mongoose');
-const validator = require('validator');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose')
+const validator = require('validator')
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 const Task = require('./task')
 
 const userSchema = new mongoose.Schema({
@@ -21,16 +21,15 @@ const userSchema = new mongoose.Schema({
                 throw new Error('Email is invalid')
             }
         }
-
     },
     password: {
         type: String,
         required: true,
-        minlength: 6,
+        minlength: 7,
         trim: true,
         validate(value) {
             if (value.toLowerCase().includes('password')) {
-                throw new Error("Password cannot contain password")
+                throw new Error('Password cannot contain "password"')
             }
         }
     },
@@ -39,7 +38,7 @@ const userSchema = new mongoose.Schema({
         default: 0,
         validate(value) {
             if (value < 0) {
-                throw new Error('Age must be a positive number')
+                throw new Error('Age must be a postive number')
             }
         }
     },
@@ -48,7 +47,12 @@ const userSchema = new mongoose.Schema({
             type: String,
             required: true
         }
-    }]
+    }],
+    avatar: {
+        type: Buffer
+    }
+}, {
+    timestamps: true
 })
 
 userSchema.virtual('tasks', {
@@ -63,13 +67,14 @@ userSchema.methods.toJSON = function () {
 
     delete userObject.password
     delete userObject.tokens
+    delete userObject.avatar
 
     return userObject
 }
 
 userSchema.methods.generateAuthToken = async function () {
     const user = this
-    const token = jwt.sign({ _id: user._id.toString() }, 'thisismynewcourse')
+    const token = jwt.sign({ _id: user._id.toString() }, process.env.JWT_SECRET)
 
     user.tokens = user.tokens.concat({ token })
     await user.save()
@@ -77,11 +82,8 @@ userSchema.methods.generateAuthToken = async function () {
     return token
 }
 
-// Check weather the email and password match with database or not
-
 userSchema.statics.findByCredentials = async (email, password) => {
     const user = await User.findOne({ email })
-
 
     if (!user) {
         throw new Error('Unable to login')
@@ -105,7 +107,6 @@ userSchema.pre('save', async function (next) {
     }
 
     next()
-
 })
 
 // Delete user tasks when user is removed
@@ -116,4 +117,5 @@ userSchema.pre('remove', async function (next) {
 })
 
 const User = mongoose.model('User', userSchema)
+
 module.exports = User
